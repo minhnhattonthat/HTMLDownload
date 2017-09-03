@@ -13,13 +13,12 @@ import static com.nhatton.htmldownload.ImageLoader.DOWNLOAD_START;
  * Created by nhatton on 9/3/17.
  */
 
-public class DownloadImageRunnable implements Runnable{
+public class DownloadImageRunnable implements Runnable {
 
     // Defines a field that contains the calling object of type PhotoTask.
     final TaskRunnableDownloadMethods mImageTask;
 
     /**
-     *
      * An interface that defines methods that PhotoTask implements. An instance of
      * PhotoTask passes itself to an PhotoDownloadRunnable instance through the
      * PhotoDownloadRunnable constructor, after which the two instances can access each other's
@@ -47,12 +46,14 @@ public class DownloadImageRunnable implements Runnable{
 
         /**
          * Defines the actions for each state of the PhotoTask instance.
+         *
          * @param state The current state of the task
          */
         void handleDownloadState(int state);
 
         /**
          * Gets the URL for the image being downloaded
+         *
          * @return The image URL
          */
         String getImageURL();
@@ -60,15 +61,18 @@ public class DownloadImageRunnable implements Runnable{
         void setImage(Bitmap bitmap);
     }
 
-    public DownloadImageRunnable(TaskRunnableDownloadMethods imageTask){
+    DownloadImageRunnable(TaskRunnableDownloadMethods imageTask) {
         mImageTask = imageTask;
     }
 
     @Override
     public void run() {
         String url = mImageTask.getImageURL();
+
         mImageTask.handleDownloadState(DOWNLOAD_START);
+
         Bitmap bitmap = null;
+
         try {
             bitmap = BitmapFactory.decodeStream((InputStream) new URL(url).getContent());
         } catch (Exception e) {

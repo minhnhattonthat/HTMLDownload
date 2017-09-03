@@ -68,23 +68,37 @@ public class ImageLoader {
             public void handleMessage(Message msg) {
                 DownloadTask task = (DownloadTask) msg.obj;
                 ImageView imageView = task.getImageView();
-                switch (msg.what){
-                    case DOWNLOAD_COMPLETE:
-                        imageView.setImageBitmap(task.getImage());
-                        break;
-                    default:
-                        super.handleMessage(msg);
+
+                if (imageView != null) {
+                    switch (msg.what) {
+                        case DOWNLOAD_COMPLETE:
+                            imageView.setImageBitmap(task.getImage());
+                            recycleTask(task);
+                            break;
+                        default:
+                            super.handleMessage(msg);
+                    }
                 }
+
             }
         };
 
     }
 
-    public static ImageLoader getInstance() {
+    static ImageLoader getInstance() {
         return sInstance;
     }
 
-    public static DownloadTask startDownload(ImageView imageView, int position) {
+    ArrayList<String> getUrlList() {
+        return urlList;
+    }
+
+    void setUrlList(ArrayList<String> urlList) {
+        this.urlList = urlList;
+    }
+
+
+    static DownloadTask startDownload(ImageView imageView, int position) {
 
         DownloadTask downloadTask = sInstance.mDownloadTaskWorkQueue.poll();
 
@@ -100,7 +114,7 @@ public class ImageLoader {
         return downloadTask;
     }
 
-    public void handleState(DownloadTask downloadTask, int state) {
+    void handleState(DownloadTask downloadTask, int state) {
         switch (state) {
             // The task finished downloading the image
             case DOWNLOAD_COMPLETE:
@@ -113,15 +127,58 @@ public class ImageLoader {
                 break;
             default:
                 break;
-
         }
     }
 
-    public void setUrlList(ArrayList<String> urlList){
-        this.urlList = urlList;
+    /**
+     * Cancels all Threads in the ThreadPool
+     */
+    public static void cancelAll() {
+
+        /*
+         * Creates an array of tasks that's the same size as the task work queue
+         */
+        DownloadTask[] taskArray = new DownloadTask[sInstance.mDownloadWorkQueue.size()];
+
+        // Populates the array with the task objects in the queue
+        sInstance.mDownloadWorkQueue.toArray(taskArray);
+
+        // Stores the array length in order to iterate over the array
+        int taskArraylen = taskArray.length;
+
+        /*
+         * Locks on the singleton to ensure that other processes aren't mutating Threads, then
+         * iterates over the array of tasks and interrupts the task's current Thread.
+         */
+        synchronized (sInstance) {
+
+            // Iterates over the array of tasks
+            for (int taskArrayIndex = 0; taskArrayIndex < taskArraylen; taskArrayIndex++) {
+
+                // Gets the task's current thread
+                Thread thread = taskArray[taskArrayIndex].mThreadThis;
+
+                // if the Thread exists, post an interrupt to it
+                if (null != thread) {
+                    thread.interrupt();
+                }
+            }
+        }
+
     }
 
-    public ArrayList<String> getUrlList(){
-        return urlList;
+    /**
+     * Recycles tasks by calling their internal recycle() method and then putting them back into
+     * the task queue.
+     *
+     * @param downloadTask The task to recycle
+     */
+    void recycleTask(DownloadTask downloadTask) {
+
+        // Frees up memory in the task
+        downloadTask.recycle();
+
+        // Puts the task object back into the queue for re-use.
+        mDownloadTaskWorkQueue.offer(downloadTask);
     }
 }

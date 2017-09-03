@@ -11,7 +11,7 @@ import java.lang.ref.WeakReference;
 
 public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadMethods {
 
-    private ImageLoader sImageLoader;
+    private static ImageLoader sImageLoader;
     private WeakReference<ImageView> mImageWeakRef;
     private int position;
 
@@ -19,20 +19,23 @@ public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadM
 
     private Runnable mDownloadRunnable;
 
-    public DownloadTask(){
+    /*
+     * Field containing the Thread this task is running on.
+     */
+    Thread mThreadThis;
+
+    // The Thread on which this task is currently running.
+    Thread mCurrentThread;
+
+    DownloadTask() {
         mDownloadRunnable = new DownloadImageRunnable(this);
         sImageLoader = ImageLoader.getInstance();
     }
 
-    public void initialize(ImageLoader imageLoader, ImageView imageView, int position) {
-        this.sImageLoader = imageLoader;
+    void initialize(ImageLoader imageLoader, ImageView imageView, int position) {
+        sImageLoader = imageLoader;
         this.mImageWeakRef = new WeakReference<>(imageView);
         this.position = position;
-    }
-
-    @Override
-    public void handleDownloadState(int state) {
-        sImageLoader.handleState(this, state);
     }
 
     @Override
@@ -40,14 +43,48 @@ public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadM
         return sImageLoader.getUrlList().get(position);
     }
 
+    Bitmap getImage() {
+        return mBitmap;
+    }
+
     @Override
     public void setImage(Bitmap bitmap) {
         mBitmap = bitmap;
     }
 
+    ImageView getImageView() {
+        return mImageWeakRef.get();
+    }
 
-    public Bitmap getImage() {
-        return mBitmap;
+    Runnable getDownloadRunnable() {
+        return mDownloadRunnable;
+    }
+
+    /*
+     * Returns the Thread that this Task is running on. The method must first get a lock on a
+     * static field, in this case the ThreadPool singleton. The lock is needed because the
+     * Thread object reference is stored in the Thread object itself, and that object can be
+     * changed by processes outside of this app.
+     */
+    public Thread getCurrentThread() {
+        synchronized (sImageLoader) {
+            return mCurrentThread;
+        }
+    }
+
+    /*
+     * Sets the identifier for the current Thread. This must be a synchronized operation; see the
+     * notes for getCurrentThread()
+     */
+    public void setCurrentThread(Thread thread) {
+        synchronized (sImageLoader) {
+            mCurrentThread = thread;
+        }
+    }
+
+    @Override
+    public void handleDownloadState(int state) {
+        sImageLoader.handleState(this, state);
     }
 
     /**
@@ -66,11 +103,4 @@ public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadM
         mBitmap = null;
     }
 
-    public ImageView getImageView() {
-        return mImageWeakRef.get();
-    }
-
-    public Runnable getDownloadRunnable() {
-        return mDownloadRunnable;
-    }
 }
