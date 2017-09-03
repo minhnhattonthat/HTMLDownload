@@ -2,7 +2,6 @@ package com.nhatton.htmldownload;
 
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,7 +14,7 @@ import java.util.ArrayList;
  * Created by nhatton on 8/26/17.
  */
 
-public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>{
+public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder> {
 
     DownloadImageTask.DownloadListener listener;
 
@@ -23,6 +22,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
     private Context context;
 
     ImageAdapter(ArrayList<String> items, Context context) {
+        ImageLoader.getInstance().setUrlList(items);
         this.items = items;
         this.context = context;
         this.listener = new AdapterDownloadListener(this);
@@ -41,7 +41,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
         }
     }
 
-    private void noticeFinished(){
+    private void noticeFinished() {
 
     }
 
@@ -56,7 +56,9 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
         holder.setIsRecyclable(false);
         holder.positionView.setText(String.valueOf(position));
 
-        new DownloadImageTask(holder.imageView, position, listener).execute(items.get(position));
+        ImageLoader.startDownload(holder.imageView, position);
+
+//        new DownloadImageTask(holder.imageView, position, listener).execute(items.get(position));
     }
 
     @Override

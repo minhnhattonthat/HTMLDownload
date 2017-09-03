@@ -1,15 +1,12 @@
 package com.nhatton.htmldownload;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.widget.ImageView;
 
-import java.io.InputStream;
-import java.net.URL;
 import java.util.ArrayList;
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -19,14 +16,15 @@ import java.util.concurrent.TimeUnit;
  * Created by nhatton on 8/31/17.
  */
 
-public class ImageLoader{
+public class ImageLoader {
 
-    private static final int DOWNLOAD_COMPLETE = 25;
+    static final int DOWNLOAD_START = 9;
+    static final int DOWNLOAD_COMPLETE = 25;
     /*
-         * Gets the number of available cores
-         * (not always the same as the maximum number of cores)
-         */
-    private static int NUMBER_OF_CORES = Runtime.getRuntime().availableProcessors();
+    * Gets the number of available cores
+    * (not always the same as the maximum number of cores)
+    */
+    private static final int NUMBER_OF_CORES = Runtime.getRuntime().availableProcessors();
 
     private static final int MAXIMUM_POOL_SIZE = 30;
 
@@ -38,22 +36,29 @@ public class ImageLoader{
     // A queue of Runnables
     private final BlockingQueue<Runnable> mDownloadWorkQueue;
 
+    // A queue of ImageLoader tasks. Tasks are handed to a ThreadPool.
+    private final Queue<DownloadTask> mDownloadTaskWorkQueue;
+
     private static ImageLoader sInstance;
     private final ThreadPoolExecutor mDownloadThreadPool;
     private Handler mHandler;
+
+    private ArrayList<String> urlList;
 
     static {
         sInstance = new ImageLoader();
     }
 
-    private ImageLoader(){
+    private ImageLoader() {
 
         mDownloadWorkQueue = new LinkedBlockingQueue<Runnable>();
 
-        mDownloadThreadPool = new ThreadPoolExecutor(NUMBER_OF_CORES,MAXIMUM_POOL_SIZE,
+        mDownloadTaskWorkQueue = new LinkedBlockingQueue<DownloadTask>();
+
+        mDownloadThreadPool = new ThreadPoolExecutor(NUMBER_OF_CORES, MAXIMUM_POOL_SIZE,
                 KEEP_ALIVE_TIME, KEEP_ALIVE_TIME_UNIT, mDownloadWorkQueue);
 
-        mHandler = new Handler(Looper.getMainLooper()){
+        mHandler = new Handler(Looper.getMainLooper()) {
         /*
              * handleMessage() defines the operations to perform when
              * the Handler receives a new Message to process.
@@ -61,36 +66,62 @@ public class ImageLoader{
 
             @Override
             public void handleMessage(Message msg) {
-                super.handleMessage(msg);
+                DownloadTask task = (DownloadTask) msg.obj;
+                ImageView imageView = task.getImageView();
+                switch (msg.what){
+                    case DOWNLOAD_COMPLETE:
+                        imageView.setImageBitmap(task.getImage());
+                        break;
+                    default:
+                        super.handleMessage(msg);
+                }
             }
         };
 
     }
 
-    public static ImageLoader getInstance(){
+    public static ImageLoader getInstance() {
         return sInstance;
     }
 
-    public static Runnable startDownload(ImageView imageView){
+    public static DownloadTask startDownload(ImageView imageView, int position) {
 
-        Runnable downloadTask = sInstance.mDownloadWorkQueue.poll();
+        DownloadTask downloadTask = sInstance.mDownloadTaskWorkQueue.poll();
 
         // If the queue was empty, create a new task instead.
         if (null == downloadTask) {
-            downloadTask = new DownloadImageRunnable();
+            downloadTask = new DownloadTask();
         }
 
-        sInstance.mDownloadThreadPool.execute(downloadTask);
+        downloadTask.initialize(sInstance, imageView, position);
+
+        sInstance.mDownloadThreadPool.execute(downloadTask.getDownloadRunnable());
 
         return downloadTask;
     }
 
-    public void handleState(DownloadImageRunnable downloadTask, int state) {
+    public void handleState(DownloadTask downloadTask, int state) {
         switch (state) {
             // The task finished downloading the image
             case DOWNLOAD_COMPLETE:
+                // Gets a Message object, stores the state in it, and sends it to the Handler
+                Message completeMessage = mHandler.obtainMessage(state, downloadTask);
+                completeMessage.sendToTarget();
+                break;
+
+            case DOWNLOAD_START:
+                break;
+            default:
+                break;
 
         }
     }
 
+    public void setUrlList(ArrayList<String> urlList){
+        this.urlList = urlList;
+    }
+
+    public ArrayList<String> getUrlList(){
+        return urlList;
+    }
 }
