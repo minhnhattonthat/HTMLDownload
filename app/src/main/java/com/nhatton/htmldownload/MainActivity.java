@@ -50,22 +50,20 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("Response", response);
                 final ArrayList<String> images = filterResponse();
 
-                Counter.INSTANCE.end();
-
                 MainActivity.this.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         ImageAdapter adapter = new ImageAdapter(images, MainActivity.this);
                         listView.setAdapter(adapter);
 
-                        Toast.makeText(MainActivity.this,
-                                String.valueOf(Counter.INSTANCE.count()) + "ms",
-                                Toast.LENGTH_SHORT)
-                                .show();
+//                        Toast.makeText(MainActivity.this,
+//                                String.valueOf(Counter.INSTANCE.count()) + "ms",
+//                                Toast.LENGTH_SHORT)
+//                                .show();
                     }
                 });
 
-                Log.e("Response time", String.valueOf(Counter.INSTANCE.count()) + "ms");
+//                Log.e("Response time", String.valueOf(Counter.INSTANCE.count()) + "ms");
             }
         });
 

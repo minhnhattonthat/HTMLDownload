@@ -1,9 +1,12 @@
 package com.nhatton.htmldownload;
 
+import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Log;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Queue;
@@ -11,6 +14,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import static java.lang.System.currentTimeMillis;
 
 /**
  * Created by nhatton on 8/31/17.
@@ -24,9 +29,9 @@ public class ImageLoader {
     * Gets the number of available cores
     * (not always the same as the maximum number of cores)
     */
-    private static final int NUMBER_OF_CORES = Runtime.getRuntime().availableProcessors();
+    private static final int NUMBER_OF_CORES = 4;
 
-    private static final int MAXIMUM_POOL_SIZE = 30;
+    private static final int MAXIMUM_POOL_SIZE = 40;
 
     // Sets the amount of time an idle thread waits before terminating
     private static final int KEEP_ALIVE_TIME = 1;
@@ -40,10 +45,12 @@ public class ImageLoader {
     private final Queue<DownloadTask> mDownloadTaskWorkQueue;
 
     private static ImageLoader sInstance;
-    private final ThreadPoolExecutor mDownloadThreadPool;
+    private ThreadPoolExecutor mDownloadThreadPool;
     private Handler mHandler;
 
     private ArrayList<String> urlList;
+
+    private ArrayList<Bitmap> bitmaps;
 
     static {
         sInstance = new ImageLoader();
@@ -59,11 +66,11 @@ public class ImageLoader {
                 KEEP_ALIVE_TIME, KEEP_ALIVE_TIME_UNIT, mDownloadWorkQueue);
 
         mHandler = new Handler(Looper.getMainLooper()) {
-        /*
+
+            /*
              * handleMessage() defines the operations to perform when
              * the Handler receives a new Message to process.
              */
-
             @Override
             public void handleMessage(Message msg) {
                 DownloadTask task = (DownloadTask) msg.obj;
@@ -95,8 +102,13 @@ public class ImageLoader {
 
     void setUrlList(ArrayList<String> urlList) {
         this.urlList = urlList;
+        bitmaps = new ArrayList<>();
+        while (bitmaps.size() < urlList.size()) bitmaps.add(null);
     }
 
+    ArrayList<Bitmap> getBitmaps(){
+        return bitmaps;
+    }
 
     static DownloadTask startDownload(ImageView imageView, int position) {
 
@@ -112,6 +124,37 @@ public class ImageLoader {
         sInstance.mDownloadThreadPool.execute(downloadTask.getDownloadRunnable());
 
         return downloadTask;
+    }
+
+    static void startDownloadAll(){
+
+        Log.e("Start download", String.valueOf(currentTimeMillis()));
+
+        for(int i = 0; i < sInstance.urlList.size(); i ++){
+            DownloadTask downloadTask = sInstance.mDownloadTaskWorkQueue.poll();
+
+            // If the queue was empty, create a new task instead.
+            if (null == downloadTask) {
+                downloadTask = new DownloadTask();
+            }
+
+            downloadTask.initialize(sInstance, null, i);
+
+            sInstance.mDownloadThreadPool.execute(downloadTask.getDownloadRunnable());
+
+        }
+        sInstance.mDownloadThreadPool.shutdown();
+        try {
+            sInstance.mDownloadThreadPool.awaitTermination(10, TimeUnit.SECONDS);
+            Counter.INSTANCE.end();
+            Log.e("Total download time", String.valueOf(Counter.INSTANCE.count()) + "ms");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        sInstance.mDownloadThreadPool = new ThreadPoolExecutor(NUMBER_OF_CORES, MAXIMUM_POOL_SIZE,
+                KEEP_ALIVE_TIME, KEEP_ALIVE_TIME_UNIT, sInstance.mDownloadWorkQueue);
+
     }
 
     void handleState(DownloadTask downloadTask, int state) {

@@ -23,6 +23,7 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
 
     ImageAdapter(ArrayList<String> items, Context context) {
         ImageLoader.getInstance().setUrlList(items);
+        ImageLoader.startDownloadAll();
         this.items = items;
         this.context = context;
         this.listener = new AdapterDownloadListener(this);
@@ -56,7 +57,10 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
         holder.setIsRecyclable(false);
         holder.positionView.setText(String.valueOf(position));
 
-        ImageLoader.startDownload(holder.imageView, position);
+//        ImageLoader.startDownload(holder.imageView, position);
+        if(ImageLoader.getInstance().getBitmaps().get(position) != null){
+            holder.imageView.setImageBitmap(ImageLoader.getInstance().getBitmaps().get(position));
+        }
 
 //        new DownloadImageTask(holder.imageView, position, listener).execute(items.get(position));
     }

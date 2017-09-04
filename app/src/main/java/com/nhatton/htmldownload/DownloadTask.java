@@ -15,8 +15,6 @@ public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadM
     private WeakReference<ImageView> mImageWeakRef;
     private int position;
 
-    private Bitmap mBitmap;
-
     private Runnable mDownloadRunnable;
 
     /*
@@ -44,12 +42,16 @@ public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadM
     }
 
     Bitmap getImage() {
-        return mBitmap;
+        return sImageLoader.getBitmaps().get(position);
     }
 
     @Override
     public void setImage(Bitmap bitmap) {
-        mBitmap = bitmap;
+        sImageLoader.getBitmaps().add(position, bitmap);
+    }
+
+    int getPosition(){
+        return position;
     }
 
     ImageView getImageView() {
@@ -100,7 +102,8 @@ public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadM
         }
 
         // Releases references to the BitMap
-        mBitmap = null;
+        sImageLoader.getBitmaps().remove(position);
+        sImageLoader.getBitmaps().add(position, null);
     }
 
 }
