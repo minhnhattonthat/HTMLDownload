@@ -9,7 +9,6 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.regex.Matcher;
@@ -113,8 +112,8 @@ public class MainActivity extends AppCompatActivity {
             i = matcher.end();
         }
 
-        for (int j =0; j < result.size(); j++){
-            if(result.get(j).contains("upscale()")){
+        for (int j = 0; j < result.size(); j++) {
+            if (result.get(j).contains("upscale()")) {
                 result.set(j, result.get(j).substring(result.get(j).lastIndexOf("https")));
             }
         }

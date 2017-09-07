@@ -6,7 +6,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Queue;
@@ -107,7 +106,7 @@ public class ImageLoader {
         while (bitmaps.size() < urlList.size()) bitmaps.add(null);
     }
 
-    ArrayList<Bitmap> getBitmaps(){
+    ArrayList<Bitmap> getBitmaps() {
         return bitmaps;
     }
 
@@ -127,11 +126,11 @@ public class ImageLoader {
         return downloadTask;
     }
 
-    static void startDownloadAll(){
+    static void startDownloadAll() {
 
         Log.e("Start download", String.valueOf(currentTimeMillis()));
 
-        for(int i = 0; i < sInstance.urlList.size(); i ++){
+        for (int i = 0; i < sInstance.urlList.size(); i++) {
             DownloadTask downloadTask = sInstance.mDownloadTaskWorkQueue.poll();
 
             // If the queue was empty, create a new task instead.

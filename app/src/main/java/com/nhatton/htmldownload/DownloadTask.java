@@ -50,7 +50,7 @@ public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadM
         sImageLoader.getBitmaps().add(position, bitmap);
     }
 
-    int getPosition(){
+    int getPosition() {
         return position;
     }
 
