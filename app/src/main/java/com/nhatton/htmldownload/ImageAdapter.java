@@ -58,9 +58,8 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
         holder.positionView.setText(String.valueOf(position));
 
 //        ImageLoader.startDownload(holder.imageView, position);
-        if(ImageLoader.getInstance().getBitmaps().get(position) != null){
-            holder.imageView.setImageBitmap(ImageLoader.getInstance().getBitmaps().get(position));
-        }
+
+        holder.imageView.setImageBitmap(ImageLoader.getInstance().getBitmaps().get(position));
 
 //        new DownloadImageTask(holder.imageView, position, listener).execute(items.get(position));
     }

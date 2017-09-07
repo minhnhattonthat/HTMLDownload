@@ -29,12 +29,13 @@ public class ImageLoader {
     * Gets the number of available cores
     * (not always the same as the maximum number of cores)
     */
-    private static final int NUMBER_OF_CORES = 4;
+    private static final int NUMBER_OF_CORES = Runtime.getRuntime().availableProcessors();
 
-    private static final int MAXIMUM_POOL_SIZE = 40;
+    private static final int MAXIMUM_POOL_SIZE = 10;
 
     // Sets the amount of time an idle thread waits before terminating
     private static final int KEEP_ALIVE_TIME = 1;
+
     // Sets the Time Unit to seconds
     private static final TimeUnit KEEP_ALIVE_TIME_UNIT = TimeUnit.SECONDS;
 

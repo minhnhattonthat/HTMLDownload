@@ -113,6 +113,12 @@ public class MainActivity extends AppCompatActivity {
             i = matcher.end();
         }
 
+        for (int j =0; j < result.size(); j++){
+            if(result.get(j).contains("upscale()")){
+                result.set(j, result.get(j).substring(result.get(j).lastIndexOf("https")));
+            }
+        }
+
         Log.e("Number of images", String.valueOf(result.size()));
         return result;
     }
