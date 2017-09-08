@@ -63,7 +63,6 @@ public class WebViewActivity extends AppCompatActivity {
             }
         });
 
-//        wv.loadUrl(url);
         wv.loadUrl(url, noCacheHeaders);
     }
 

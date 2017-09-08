@@ -18,9 +18,6 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
     private EditText linkText;
-    private Button getButton;
-    private Button webViewButton;
-    private Button resetButton;
     private RecyclerView listView;
     private String response;
 
@@ -31,9 +28,9 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         linkText = findViewById(R.id.get_link);
-        getButton = findViewById(R.id.get_button);
-        webViewButton = findViewById(R.id.web_view_button);
-        resetButton = findViewById(R.id.reset_button);
+        Button getButton = findViewById(R.id.get_button);
+        Button webViewButton = findViewById(R.id.web_view_button);
+        Button resetButton = findViewById(R.id.reset_button);
         listView = findViewById(R.id.list_view);
 
         listView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
@@ -44,7 +41,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 Counter.INSTANCE.start();
+
                 String link = linkText.getText().toString();
+                link = autoCorrectUrl(link);
+
                 response = handler.makeServiceCall(link);
                 Log.d("Response", response);
                 final ArrayList<String> images = filterResponse();
@@ -54,26 +54,17 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
                         ImageAdapter adapter = new ImageAdapter(images, MainActivity.this);
                         listView.setAdapter(adapter);
-
-//                        Toast.makeText(MainActivity.this,
-//                                String.valueOf(Counter.INSTANCE.count()) + "ms",
-//                                Toast.LENGTH_SHORT)
-//                                .show();
                     }
                 });
-
-//                Log.e("Response time", String.valueOf(Counter.INSTANCE.count()) + "ms");
             }
         });
 
         getButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
                 if (!linkText.getText().toString().isEmpty()) {
                     thread.start();
                 }
-
             }
         });
 
@@ -82,7 +73,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 if (!linkText.getText().toString().isEmpty()) {
                     Intent intent = new Intent(MainActivity.this, WebViewActivity.class);
-                    intent.putExtra("url", linkText.getText().toString());
+                    intent.putExtra("url", autoCorrectUrl(linkText.getText().toString()));
                     startActivity(intent);
                 }
             }
@@ -108,18 +99,21 @@ public class MainActivity extends AppCompatActivity {
         while (matcher.find(i)) {
             String item = response.substring(matcher.start(), matcher.end());
             item = item.replaceFirst("(<img.*src|content)=\"", "");
+            if (item.indexOf("http") != item.lastIndexOf("http")) {
+                item = item.substring(item.lastIndexOf("http"));
+            }
             result.add(item);
             i = matcher.end();
-        }
-
-        for (int j = 0; j < result.size(); j++) {
-            if (result.get(j).contains("upscale()")) {
-                result.set(j, result.get(j).substring(result.get(j).lastIndexOf("https")));
-            }
         }
 
         Log.e("Number of images", String.valueOf(result.size()));
         return result;
     }
 
+    private static String autoCorrectUrl(String url) {
+        if (!url.startsWith("http")) {
+            url = "http://" + url;
+        }
+        return url;
+    }
 }
