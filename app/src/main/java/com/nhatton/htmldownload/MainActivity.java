@@ -21,7 +21,6 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView listView;
     private String response;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,32 +36,31 @@ public class MainActivity extends AppCompatActivity {
 
         final HttpHandler handler = new HttpHandler();
 
-        final Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Counter.INSTANCE.start();
-
-                String link = linkText.getText().toString();
-                link = autoCorrectUrl(link);
-
-                response = handler.makeServiceCall(link);
-                Log.d("Response", response);
-                final ArrayList<String> images = filterResponse();
-
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        ImageAdapter adapter = new ImageAdapter(images, MainActivity.this);
-                        listView.setAdapter(adapter);
-                    }
-                });
-            }
-        });
-
         getButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (!linkText.getText().toString().isEmpty()) {
+                    final Thread thread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Counter.INSTANCE.start();
+
+                            String link = linkText.getText().toString();
+                            link = autoCorrectUrl(link);
+
+                            response = handler.makeServiceCall(link);
+                            Log.d("Response", response);
+                            final ArrayList<String> images = filterResponse();
+
+                            MainActivity.this.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    ImageAdapter adapter = new ImageAdapter(images, MainActivity.this);
+                                    listView.setAdapter(adapter);
+                                }
+                            });
+                        }
+                    });
                     thread.start();
                 }
             }
@@ -83,9 +81,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 linkText.getText().clear();
+                ImageLoader.cancelAll();
 
             }
         });
+
+        linkText.setText("https://cryptid-creations.deviantart.com/gallery/");
     }
 
     private ArrayList<String> filterResponse() {

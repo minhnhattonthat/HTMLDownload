@@ -7,6 +7,7 @@ import android.os.Message;
 import android.util.Log;
 import android.widget.ImageView;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
@@ -24,13 +25,14 @@ public class ImageLoader {
 
     static final int DOWNLOAD_START = 9;
     static final int DOWNLOAD_COMPLETE = 25;
+    static final int ALL_DOWNLOAD_COMPLETE = 259;
     /*
     * Gets the number of available cores
     * (not always the same as the maximum number of cores)
     */
     private static final int NUMBER_OF_CORES = Runtime.getRuntime().availableProcessors();
 
-    private static final int MAXIMUM_POOL_SIZE = 10;
+    private static final int MAXIMUM_POOL_SIZE = 8;
 
     // Sets the amount of time an idle thread waits before terminating
     private static final int KEEP_ALIVE_TIME = 1;
@@ -58,9 +60,9 @@ public class ImageLoader {
 
     private ImageLoader() {
 
-        mDownloadWorkQueue = new LinkedBlockingQueue<Runnable>();
+        mDownloadWorkQueue = new LinkedBlockingQueue<>();
 
-        mDownloadTaskWorkQueue = new LinkedBlockingQueue<DownloadTask>();
+        mDownloadTaskWorkQueue = new LinkedBlockingQueue<>();
 
         mDownloadThreadPool = new ThreadPoolExecutor(NUMBER_OF_CORES, MAXIMUM_POOL_SIZE,
                 KEEP_ALIVE_TIME, KEEP_ALIVE_TIME_UNIT, mDownloadWorkQueue);
@@ -74,17 +76,18 @@ public class ImageLoader {
             @Override
             public void handleMessage(Message msg) {
                 DownloadTask task = (DownloadTask) msg.obj;
-                ImageView imageView = task.getImageView();
+//                ImageView imageView = task.getImageView();
 
-                if (imageView != null) {
-                    switch (msg.what) {
-                        case DOWNLOAD_COMPLETE:
-                            imageView.setImageBitmap(task.getImage());
-                            recycleTask(task);
-                            break;
-                        default:
-                            super.handleMessage(msg);
-                    }
+                switch (msg.what) {
+                    case DOWNLOAD_COMPLETE:
+//                        imageView.setImageBitmap(task.getImage());
+                        recycleTask(task);
+                        break;
+                    case ALL_DOWNLOAD_COMPLETE:
+
+                        break;
+                    default:
+                        super.handleMessage(msg);
                 }
 
             }
@@ -102,6 +105,7 @@ public class ImageLoader {
 
     void setUrlList(ArrayList<String> urlList) {
         this.urlList = urlList;
+
         bitmaps = new ArrayList<>();
         while (bitmaps.size() < urlList.size()) bitmaps.add(null);
     }
@@ -126,32 +130,41 @@ public class ImageLoader {
         return downloadTask;
     }
 
+    private static DownloadTask startDownload(int position) {
+
+        DownloadTask downloadTask = sInstance.mDownloadTaskWorkQueue.poll();
+
+        // If the queue was empty, create a new task instead.
+        if (null == downloadTask) {
+            downloadTask = new DownloadTask();
+        }
+
+        downloadTask.initialize(sInstance, position);
+
+        sInstance.mDownloadThreadPool.execute(downloadTask.getDownloadRunnable());
+
+        return downloadTask;
+    }
+
     static void startDownloadAll() {
 
         Log.e("Start download", String.valueOf(currentTimeMillis()));
 
         for (int i = 0; i < sInstance.urlList.size(); i++) {
-            DownloadTask downloadTask = sInstance.mDownloadTaskWorkQueue.poll();
-
-            // If the queue was empty, create a new task instead.
-            if (null == downloadTask) {
-                downloadTask = new DownloadTask();
-            }
-
-            downloadTask.initialize(sInstance, null, i);
-
-            sInstance.mDownloadThreadPool.execute(downloadTask.getDownloadRunnable());
-
+            startDownload(i);
         }
+
         sInstance.mDownloadThreadPool.shutdown();
+
         try {
-            sInstance.mDownloadThreadPool.awaitTermination(10, TimeUnit.SECONDS);
+            sInstance.mDownloadThreadPool.awaitTermination(60, TimeUnit.SECONDS);
             Counter.INSTANCE.end();
             Log.e("Total download time", String.valueOf(Counter.INSTANCE.count()) + "ms");
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
+        //Init the threadpool again after finish
         sInstance.mDownloadThreadPool = new ThreadPoolExecutor(NUMBER_OF_CORES, MAXIMUM_POOL_SIZE,
                 KEEP_ALIVE_TIME, KEEP_ALIVE_TIME_UNIT, sInstance.mDownloadWorkQueue);
 
@@ -165,7 +178,6 @@ public class ImageLoader {
                 Message completeMessage = mHandler.obtainMessage(state, downloadTask);
                 completeMessage.sendToTarget();
                 break;
-
             case DOWNLOAD_START:
                 break;
             default:
@@ -176,7 +188,7 @@ public class ImageLoader {
     /**
      * Cancels all Threads in the ThreadPool
      */
-    public static void cancelAll() {
+    static void cancelAll() {
 
         /*
          * Creates an array of tasks that's the same size as the task work queue
@@ -186,20 +198,17 @@ public class ImageLoader {
         // Populates the array with the task objects in the queue
         sInstance.mDownloadWorkQueue.toArray(taskArray);
 
-        // Stores the array length in order to iterate over the array
-        int taskArraylen = taskArray.length;
-
         /*
          * Locks on the singleton to ensure that other processes aren't mutating Threads, then
          * iterates over the array of tasks and interrupts the task's current Thread.
          */
-        synchronized (sInstance) {
+        synchronized (ImageLoader.class) {
 
             // Iterates over the array of tasks
-            for (int taskArrayIndex = 0; taskArrayIndex < taskArraylen; taskArrayIndex++) {
+            for (DownloadTask aTaskArray : taskArray) {
 
                 // Gets the task's current thread
-                Thread thread = taskArray[taskArrayIndex].mThreadThis;
+                Thread thread = aTaskArray.mThreadThis;
 
                 // if the Thread exists, post an interrupt to it
                 if (null != thread) {
@@ -207,7 +216,6 @@ public class ImageLoader {
                 }
             }
         }
-
     }
 
     /**
@@ -216,7 +224,7 @@ public class ImageLoader {
      *
      * @param downloadTask The task to recycle
      */
-    void recycleTask(DownloadTask downloadTask) {
+    private void recycleTask(DownloadTask downloadTask) {
 
         // Frees up memory in the task
         downloadTask.recycle();
@@ -224,4 +232,5 @@ public class ImageLoader {
         // Puts the task object back into the queue for re-use.
         mDownloadTaskWorkQueue.offer(downloadTask);
     }
+
 }

@@ -1,6 +1,9 @@
 package com.nhatton.htmldownload;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,7 +26,18 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
 
     ImageAdapter(ArrayList<String> items, Context context) {
         ImageLoader.getInstance().setUrlList(items);
-        ImageLoader.startDownloadAll();
+
+        //Start download all images in background
+        final Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+                ImageLoader.startDownloadAll();
+            }
+        };
+        Thread thread = new Thread(task);
+        thread.start();
+
         this.items = items;
         this.context = context;
         this.listener = new AdapterDownloadListener(this);
@@ -53,13 +67,25 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
     }
 
     @Override
-    public void onBindViewHolder(ImageHolder holder, int position) {
+    public void onBindViewHolder(final ImageHolder holder, int position) {
         holder.setIsRecyclable(false);
         holder.positionView.setText(String.valueOf(position));
 
 //        ImageLoader.startDownload(holder.imageView, position);
 
-        holder.imageView.setImageBitmap(ImageLoader.getInstance().getBitmaps().get(position));
+        //Try to set image until get bitmap
+        final Handler handler = new Handler();
+        final Runnable task = new Runnable() {
+            @Override
+            public void run() {
+                if (ImageLoader.getInstance().getBitmaps().get(holder.getAdapterPosition()) != null) {
+                    holder.imageView.setImageBitmap(ImageLoader.getInstance().getBitmaps().get(holder.getAdapterPosition()));
+                } else {
+                    handler.postDelayed(this, 1000);
+                }
+            }
+        };
+        handler.post(task);
 
 //        new DownloadImageTask(holder.imageView, position, listener).execute(items.get(position));
     }

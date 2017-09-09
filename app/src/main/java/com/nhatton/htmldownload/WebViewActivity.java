@@ -50,7 +50,7 @@ public class WebViewActivity extends AppCompatActivity {
                 Counter.INSTANCE.end();
                 Toast.makeText(WebViewActivity.this,
                         String.valueOf(Counter.INSTANCE.count()) + "ms",
-                        Toast.LENGTH_SHORT)
+                        Toast.LENGTH_LONG)
                         .show();
                 Log.e("Webview download time", String.valueOf(Counter.INSTANCE.count()) + "ms");
                 view.clearCache(true);

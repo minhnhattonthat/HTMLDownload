@@ -36,6 +36,11 @@ public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadM
         this.position = position;
     }
 
+    void initialize(ImageLoader imageLoader, int position) {
+        sImageLoader = imageLoader;
+        this.position = position;
+    }
+
     @Override
     public String getImageURL() {
         return sImageLoader.getUrlList().get(position);
@@ -62,26 +67,9 @@ public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadM
         return mDownloadRunnable;
     }
 
-    /*
-     * Returns the Thread that this Task is running on. The method must first get a lock on a
-     * static field, in this case the ThreadPool singleton. The lock is needed because the
-     * Thread object reference is stored in the Thread object itself, and that object can be
-     * changed by processes outside of this app.
-     */
-    public Thread getCurrentThread() {
-        synchronized (sImageLoader) {
-            return mCurrentThread;
-        }
-    }
-
-    /*
-     * Sets the identifier for the current Thread. This must be a synchronized operation; see the
-     * notes for getCurrentThread()
-     */
-    public void setCurrentThread(Thread thread) {
-        synchronized (sImageLoader) {
-            mCurrentThread = thread;
-        }
+    @Override
+    public void setDownloadThread(Thread currentThread) {
+        mCurrentThread = currentThread;
     }
 
     @Override
@@ -102,8 +90,7 @@ public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadM
         }
 
         // Releases references to the BitMap
-        sImageLoader.getBitmaps().remove(position);
-        sImageLoader.getBitmaps().add(position, null);
+//        sImageLoader.getBitmaps().set(position, null);
     }
 
 }

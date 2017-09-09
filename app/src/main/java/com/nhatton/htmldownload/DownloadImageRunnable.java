@@ -30,7 +30,7 @@ public class DownloadImageRunnable implements Runnable {
          * Sets the Thread that this instance is running on
          * @param currentThread the current Thread
          */
-//        void setDownloadThread(Thread currentThread);
+        void setDownloadThread(Thread currentThread);
 
         /**
          * Returns the current contents of the download buffer
@@ -67,6 +67,10 @@ public class DownloadImageRunnable implements Runnable {
 
     @Override
     public void run() {
+        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+
+        mImageTask.setDownloadThread(Thread.currentThread());
+
         String url = mImageTask.getImageURL();
 
         mImageTask.handleDownloadState(DOWNLOAD_START);
@@ -82,5 +86,9 @@ public class DownloadImageRunnable implements Runnable {
         mImageTask.setImage(bitmap);
 
         mImageTask.handleDownloadState(DOWNLOAD_COMPLETE);
+
+        mImageTask.setDownloadThread(null);
+
+        Thread.interrupted();
     }
 }
