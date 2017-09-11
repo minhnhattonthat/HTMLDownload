@@ -39,6 +39,8 @@ public class MainActivity extends AppCompatActivity {
         getButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                resetAll();
+
                 if (!linkText.getText().toString().isEmpty()) {
                     final Thread thread = new Thread(new Runnable() {
                         @Override
@@ -81,8 +83,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 linkText.getText().clear();
-                ImageLoader.cancelAll();
-
+                resetAll();
             }
         });
 
@@ -116,5 +117,10 @@ public class MainActivity extends AppCompatActivity {
             url = "http://" + url;
         }
         return url;
+    }
+
+    private void resetAll(){
+        listView.setAdapter(null);
+        ImageLoader.cancelAll();
     }
 }

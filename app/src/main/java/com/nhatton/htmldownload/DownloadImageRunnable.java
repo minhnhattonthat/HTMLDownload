@@ -3,7 +3,9 @@ package com.nhatton.htmldownload;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
 
 import static com.nhatton.htmldownload.ImageLoader.DOWNLOAD_COMPLETE;
@@ -28,6 +30,7 @@ public class DownloadImageRunnable implements Runnable {
 
         /**
          * Sets the Thread that this instance is running on
+         *
          * @param currentThread the current Thread
          */
         void setDownloadThread(Thread currentThread);
@@ -77,11 +80,101 @@ public class DownloadImageRunnable implements Runnable {
 
         Bitmap bitmap = null;
 
+        InputStream is = null;
+        byte[] byteBuffer = null;
+
         try {
-            bitmap = BitmapFactory.decodeStream((InputStream) new URL(url).getContent());
-        } catch (Exception e) {
+            HttpURLConnection httpConn = (HttpURLConnection) new URL(url).openConnection();
+
+            is = httpConn.getInputStream();
+
+            int contentLength = httpConn.getContentLength();
+
+            if (contentLength == -1) {
+                byte[] tempBuffer = new byte[1024 * 2];
+
+                int bufferLeft = tempBuffer.length;
+                int bufferOffset = 0;
+                int result = 0;
+
+                outer:
+                do {
+                    while (bufferLeft > 0) {
+                        result = is.read(tempBuffer, bufferOffset, bufferLeft);
+                        if (result < 0) {
+                            break outer;
+                        }
+                        bufferOffset = bufferOffset + result;
+                        bufferLeft = bufferLeft - result;
+                    }
+                    bufferLeft = 1024 * 2;
+                    int newSize = tempBuffer.length + bufferLeft;
+                    byte[] expandedBuffer = new byte[newSize];
+                    System.arraycopy(tempBuffer, 0, expandedBuffer, 0, tempBuffer.length);
+                    tempBuffer = expandedBuffer;
+
+                } while (true);
+
+                byteBuffer = new byte[bufferOffset];
+                System.arraycopy(tempBuffer, 0, byteBuffer, 0, bufferOffset);
+
+            } else {
+                byteBuffer = new byte[contentLength];
+
+                int remain = contentLength;
+
+                int bufferOffset = 0;
+
+                while (remain > 0) {
+                    int result = is.read(byteBuffer, bufferOffset, remain);
+
+                    bufferOffset = bufferOffset + result;
+                    remain = remain - result;
+                }
+            }
+
+        } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
+
+        if (byteBuffer != null) {
+            bitmap = BitmapFactory.decodeByteArray(byteBuffer, 0, byteBuffer.length);
+        }
+        //Decode bitmap
+//        BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
+//
+//        int targetWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
+//
+//        bitmapOptions.inJustDecodeBounds = true;
+
+//        int sampleSize = bitmapOptions.outWidth / targetWidth;
+
+        /*
+             * If either of the scaling factors is > 1, the image's
+             * actual dimension is larger that the available dimension.
+             * This means that the BitmapFactory must compress the image
+             * by the larger of the scaling factors. Setting
+             * inSampleSize accomplishes this.
+             */
+//        if (sampleSize > 1) {
+//            bitmapOptions.inSampleSize = sampleSize;
+//        }
+//
+//        bitmapOptions.inJustDecodeBounds = false;
+//
+//        try {
+//            bitmap = BitmapFactory.decodeStream((InputStream) new URL(url).getContent());
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
 
         mImageTask.setImage(bitmap);
 

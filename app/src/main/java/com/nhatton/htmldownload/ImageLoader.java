@@ -32,7 +32,7 @@ public class ImageLoader {
     */
     private static final int NUMBER_OF_CORES = Runtime.getRuntime().availableProcessors();
 
-    private static final int MAXIMUM_POOL_SIZE = 8;
+    private static final int MAXIMUM_POOL_SIZE = NUMBER_OF_CORES * 2;
 
     // Sets the amount of time an idle thread waits before terminating
     private static final int KEEP_ALIVE_TIME = 1;
@@ -44,7 +44,7 @@ public class ImageLoader {
     private final BlockingQueue<Runnable> mDownloadWorkQueue;
 
     // A queue of ImageLoader tasks. Tasks are handed to a ThreadPool.
-    private final Queue<DownloadTask> mDownloadTaskWorkQueue;
+    private final BlockingQueue<DownloadTask> mDownloadTaskWorkQueue;
 
     private static ImageLoader sInstance;
     private ThreadPoolExecutor mDownloadThreadPool;
@@ -140,7 +140,6 @@ public class ImageLoader {
         }
 
         downloadTask.initialize(sInstance, position);
-
         sInstance.mDownloadThreadPool.execute(downloadTask.getDownloadRunnable());
 
         return downloadTask;
@@ -166,7 +165,7 @@ public class ImageLoader {
 
         //Init the threadpool again after finish
         sInstance.mDownloadThreadPool = new ThreadPoolExecutor(NUMBER_OF_CORES, MAXIMUM_POOL_SIZE,
-                KEEP_ALIVE_TIME, KEEP_ALIVE_TIME_UNIT, sInstance.mDownloadWorkQueue);
+                KEEP_ALIVE_TIME, KEEP_ALIVE_TIME_UNIT, new LinkedBlockingQueue<Runnable>());
 
     }
 
@@ -193,10 +192,10 @@ public class ImageLoader {
         /*
          * Creates an array of tasks that's the same size as the task work queue
          */
-        DownloadTask[] taskArray = new DownloadTask[sInstance.mDownloadWorkQueue.size()];
+        DownloadTask[] taskArray = new DownloadTask[sInstance.mDownloadTaskWorkQueue.size()];
 
         // Populates the array with the task objects in the queue
-        sInstance.mDownloadWorkQueue.toArray(taskArray);
+        sInstance.mDownloadTaskWorkQueue.toArray(taskArray);
 
         /*
          * Locks on the singleton to ensure that other processes aren't mutating Threads, then
@@ -208,7 +207,7 @@ public class ImageLoader {
             for (DownloadTask aTaskArray : taskArray) {
 
                 // Gets the task's current thread
-                Thread thread = aTaskArray.mThreadThis;
+                Thread thread = aTaskArray.mCurrentThread;
 
                 // if the Thread exists, post an interrupt to it
                 if (null != thread) {
@@ -233,4 +232,8 @@ public class ImageLoader {
         mDownloadTaskWorkQueue.offer(downloadTask);
     }
 
+    void reset(){
+        bitmaps = new ArrayList<>();
+        urlList = new ArrayList<>();
+    }
 }
