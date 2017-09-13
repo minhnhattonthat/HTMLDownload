@@ -7,9 +7,7 @@ import android.os.Message;
 import android.util.Log;
 import android.widget.ImageView;
 
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -26,6 +24,7 @@ public class ImageLoader {
     static final int DOWNLOAD_START = 9;
     static final int DOWNLOAD_COMPLETE = 25;
     static final int ALL_DOWNLOAD_COMPLETE = 259;
+    static final int DECODE_COMPLETE = 92;
     /*
     * Gets the number of available cores
     * (not always the same as the maximum number of cores)
@@ -44,7 +43,7 @@ public class ImageLoader {
     private final BlockingQueue<Runnable> mDownloadWorkQueue;
 
     // A queue of ImageLoader tasks. Tasks are handed to a ThreadPool.
-    private final BlockingQueue<DownloadTask> mDownloadTaskWorkQueue;
+    private final BlockingQueue<ImageTask> mImageTaskWorkQueue;
 
     private static ImageLoader sInstance;
     private ThreadPoolExecutor mDownloadThreadPool;
@@ -62,7 +61,7 @@ public class ImageLoader {
 
         mDownloadWorkQueue = new LinkedBlockingQueue<>();
 
-        mDownloadTaskWorkQueue = new LinkedBlockingQueue<>();
+        mImageTaskWorkQueue = new LinkedBlockingQueue<>();
 
         mDownloadThreadPool = new ThreadPoolExecutor(NUMBER_OF_CORES, MAXIMUM_POOL_SIZE,
                 KEEP_ALIVE_TIME, KEEP_ALIVE_TIME_UNIT, mDownloadWorkQueue);
@@ -75,16 +74,19 @@ public class ImageLoader {
              */
             @Override
             public void handleMessage(Message msg) {
-                DownloadTask task = (DownloadTask) msg.obj;
+                ImageTask task = (ImageTask) msg.obj;
 //                ImageView imageView = task.getImageView();
 
                 switch (msg.what) {
                     case DOWNLOAD_COMPLETE:
 //                        imageView.setImageBitmap(task.getImage());
+                        sInstance.mDownloadThreadPool.execute(task.getDecodeRunnable());
                         recycleTask(task);
                         break;
                     case ALL_DOWNLOAD_COMPLETE:
-
+                        break;
+                    case DECODE_COMPLETE:
+                        recycleTask(task);
                         break;
                     default:
                         super.handleMessage(msg);
@@ -114,35 +116,35 @@ public class ImageLoader {
         return bitmaps;
     }
 
-    static DownloadTask startDownload(ImageView imageView, int position) {
+    static ImageTask startDownload(ImageView imageView, int position) {
 
-        DownloadTask downloadTask = sInstance.mDownloadTaskWorkQueue.poll();
+        ImageTask imageTask = sInstance.mImageTaskWorkQueue.poll();
 
         // If the queue was empty, create a new task instead.
-        if (null == downloadTask) {
-            downloadTask = new DownloadTask();
+        if (null == imageTask) {
+            imageTask = new ImageTask();
         }
 
-        downloadTask.initialize(sInstance, imageView, position);
+        imageTask.initialize(sInstance, imageView, position);
 
-        sInstance.mDownloadThreadPool.execute(downloadTask.getDownloadRunnable());
+        sInstance.mDownloadThreadPool.execute(imageTask.getDownloadRunnable());
 
-        return downloadTask;
+        return imageTask;
     }
 
-    private static DownloadTask startDownload(int position) {
+    private static ImageTask startDownload(int position) {
 
-        DownloadTask downloadTask = sInstance.mDownloadTaskWorkQueue.poll();
+        ImageTask imageTask = sInstance.mImageTaskWorkQueue.poll();
 
         // If the queue was empty, create a new task instead.
-        if (null == downloadTask) {
-            downloadTask = new DownloadTask();
+        if (null == imageTask) {
+            imageTask = new ImageTask();
         }
 
-        downloadTask.initialize(sInstance, position);
-        sInstance.mDownloadThreadPool.execute(downloadTask.getDownloadRunnable());
+        imageTask.initialize(sInstance, position);
+        sInstance.mDownloadThreadPool.execute(imageTask.getDownloadRunnable());
 
-        return downloadTask;
+        return imageTask;
     }
 
     static void startDownloadAll() {
@@ -153,31 +155,35 @@ public class ImageLoader {
             startDownload(i);
         }
 
-        sInstance.mDownloadThreadPool.shutdown();
+//        sInstance.mDownloadThreadPool.shutdown();
 
-        try {
-            sInstance.mDownloadThreadPool.awaitTermination(60, TimeUnit.SECONDS);
-            Counter.INSTANCE.end();
-            Log.e("Total download time", String.valueOf(Counter.INSTANCE.count()) + "ms");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            sInstance.mDownloadThreadPool.awaitTermination(60, TimeUnit.SECONDS);
+//            Counter.INSTANCE.end();
+//            Log.e("Total download time", String.valueOf(Counter.INSTANCE.count()) + "ms");
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
 
         //Init the threadpool again after finish
-        sInstance.mDownloadThreadPool = new ThreadPoolExecutor(NUMBER_OF_CORES, MAXIMUM_POOL_SIZE,
-                KEEP_ALIVE_TIME, KEEP_ALIVE_TIME_UNIT, new LinkedBlockingQueue<Runnable>());
+//        sInstance.mDownloadThreadPool = new ThreadPoolExecutor(NUMBER_OF_CORES, MAXIMUM_POOL_SIZE,
+//                KEEP_ALIVE_TIME, KEEP_ALIVE_TIME_UNIT, new LinkedBlockingQueue<Runnable>());
 
     }
 
-    void handleState(DownloadTask downloadTask, int state) {
+    void handleState(ImageTask imageTask, int state) {
         switch (state) {
             // The task finished downloading the image
             case DOWNLOAD_COMPLETE:
                 // Gets a Message object, stores the state in it, and sends it to the Handler
-                Message completeMessage = mHandler.obtainMessage(state, downloadTask);
+                Message completeMessage = mHandler.obtainMessage(state, imageTask);
                 completeMessage.sendToTarget();
                 break;
             case DOWNLOAD_START:
+                break;
+            case DECODE_COMPLETE:
+                completeMessage = mHandler.obtainMessage(state, imageTask);
+                completeMessage.sendToTarget();
                 break;
             default:
                 break;
@@ -192,10 +198,10 @@ public class ImageLoader {
         /*
          * Creates an array of tasks that's the same size as the task work queue
          */
-        DownloadTask[] taskArray = new DownloadTask[sInstance.mDownloadTaskWorkQueue.size()];
+        ImageTask[] taskArray = new ImageTask[sInstance.mImageTaskWorkQueue.size()];
 
         // Populates the array with the task objects in the queue
-        sInstance.mDownloadTaskWorkQueue.toArray(taskArray);
+        sInstance.mImageTaskWorkQueue.toArray(taskArray);
 
         /*
          * Locks on the singleton to ensure that other processes aren't mutating Threads, then
@@ -204,7 +210,7 @@ public class ImageLoader {
         synchronized (ImageLoader.class) {
 
             // Iterates over the array of tasks
-            for (DownloadTask aTaskArray : taskArray) {
+            for (ImageTask aTaskArray : taskArray) {
 
                 // Gets the task's current thread
                 Thread thread = aTaskArray.mCurrentThread;
@@ -221,18 +227,18 @@ public class ImageLoader {
      * Recycles tasks by calling their internal recycle() method and then putting them back into
      * the task queue.
      *
-     * @param downloadTask The task to recycle
+     * @param imageTask The task to recycle
      */
-    private void recycleTask(DownloadTask downloadTask) {
+    private void recycleTask(ImageTask imageTask) {
 
         // Frees up memory in the task
-        downloadTask.recycle();
+        imageTask.recycle();
 
         // Puts the task object back into the queue for re-use.
-        mDownloadTaskWorkQueue.offer(downloadTask);
+        mImageTaskWorkQueue.offer(imageTask);
     }
 
-    void reset(){
+    void reset() {
         bitmaps = new ArrayList<>();
         urlList = new ArrayList<>();
     }

@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
         return url;
     }
 
-    private void resetAll(){
+    private void resetAll() {
         listView.setAdapter(null);
         ImageLoader.cancelAll();
     }

@@ -14,6 +14,7 @@ import java.net.URL;
  */
 
 public class DownloadImageTask extends AsyncTask<String, Integer, Bitmap> {
+
     private WeakReference<ImageView> imageView;
     private WeakReference<DownloadListener> listener;
     private int position;

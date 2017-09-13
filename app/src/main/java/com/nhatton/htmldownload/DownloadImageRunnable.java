@@ -1,7 +1,6 @@
 package com.nhatton.htmldownload;
 
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,15 +36,17 @@ public class DownloadImageRunnable implements Runnable {
 
         /**
          * Returns the current contents of the download buffer
+         *
          * @return The byte array downloaded from the URL in the last read
          */
-//        byte[] getByteBuffer();
+        byte[] getByteBuffer();
 
         /**
          * Sets the current contents of the download buffer
+         *
          * @param buffer The bytes that were just read
          */
-//        void setByteBuffer(byte[] buffer);
+        void setByteBuffer(byte[] buffer);
 
         /**
          * Defines the actions for each state of the PhotoTask instance.
@@ -60,8 +61,6 @@ public class DownloadImageRunnable implements Runnable {
          * @return The image URL
          */
         String getImageURL();
-
-        void setImage(Bitmap bitmap);
     }
 
     DownloadImageRunnable(TaskRunnableDownloadMethods imageTask) {
@@ -145,38 +144,7 @@ public class DownloadImageRunnable implements Runnable {
             }
         }
 
-        if (byteBuffer != null) {
-            bitmap = BitmapFactory.decodeByteArray(byteBuffer, 0, byteBuffer.length);
-        }
-        //Decode bitmap
-//        BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
-//
-//        int targetWidth = Resources.getSystem().getDisplayMetrics().widthPixels;
-//
-//        bitmapOptions.inJustDecodeBounds = true;
-
-//        int sampleSize = bitmapOptions.outWidth / targetWidth;
-
-        /*
-             * If either of the scaling factors is > 1, the image's
-             * actual dimension is larger that the available dimension.
-             * This means that the BitmapFactory must compress the image
-             * by the larger of the scaling factors. Setting
-             * inSampleSize accomplishes this.
-             */
-//        if (sampleSize > 1) {
-//            bitmapOptions.inSampleSize = sampleSize;
-//        }
-//
-//        bitmapOptions.inJustDecodeBounds = false;
-//
-//        try {
-//            bitmap = BitmapFactory.decodeStream((InputStream) new URL(url).getContent());
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-
-        mImageTask.setImage(bitmap);
+        mImageTask.setByteBuffer(byteBuffer);
 
         mImageTask.handleDownloadState(DOWNLOAD_COMPLETE);
 

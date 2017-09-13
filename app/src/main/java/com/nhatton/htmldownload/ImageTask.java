@@ -9,24 +9,24 @@ import java.lang.ref.WeakReference;
  * Created by nhatton on 9/3/17.
  */
 
-public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadMethods {
+public class ImageTask implements DownloadImageRunnable.TaskRunnableDownloadMethods, DecodeBitmapRunnable.TaskRunnableDecodeMethods {
 
     private static ImageLoader sImageLoader;
     private WeakReference<ImageView> mImageWeakRef;
     private int position;
 
     private Runnable mDownloadRunnable;
+    private Runnable mDecodeRunnable;
 
-    /*
-     * Field containing the Thread this task is running on.
-     */
-    Thread mThreadThis;
+    private byte[] mByteBuffer;
 
     // The Thread on which this task is currently running.
     Thread mCurrentThread;
 
-    DownloadTask() {
+
+    ImageTask() {
         mDownloadRunnable = new DownloadImageRunnable(this);
+        mDecodeRunnable = new DecodeBitmapRunnable(this);
         sImageLoader = ImageLoader.getInstance();
     }
 
@@ -46,13 +46,25 @@ public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadM
         return sImageLoader.getUrlList().get(position);
     }
 
-    Bitmap getImage() {
-        return sImageLoader.getBitmaps().get(position);
-    }
-
     @Override
     public void setImage(Bitmap bitmap) {
         sImageLoader.getBitmaps().add(position, bitmap);
+    }
+
+    @Override
+    public byte[] getByteBuffer() {
+        return mByteBuffer;
+    }
+
+
+    @Override
+    public void setDecodeThread(Thread currentThread) {
+
+    }
+
+    @Override
+    public void setByteBuffer(byte[] buffer) {
+        mByteBuffer = buffer;
     }
 
     int getPosition() {
@@ -67,6 +79,10 @@ public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadM
         return mDownloadRunnable;
     }
 
+    Runnable getDecodeRunnable() {
+        return mDecodeRunnable;
+    }
+
     @Override
     public void setDownloadThread(Thread currentThread) {
         mCurrentThread = currentThread;
@@ -77,8 +93,13 @@ public class DownloadTask implements DownloadImageRunnable.TaskRunnableDownloadM
         sImageLoader.handleState(this, state);
     }
 
+    @Override
+    public void handleDecodeState(int state) {
+        sImageLoader.handleState(this, state);
+    }
+
     /**
-     * Recycles an DownloadTask object before it's put back into the pool. One reason to do
+     * Recycles an ImageTask object before it's put back into the pool. One reason to do
      * this is to avoid memory leaks.
      */
     void recycle() {
