@@ -1,6 +1,8 @@
 package com.nhatton.htmldownload;
 
 import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Handler;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -24,6 +26,12 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
 
     ImageAdapter(ArrayList<String> items, Context context) {
         ImageLoader.getInstance().setUrlList(items);
+
+        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (cm != null) {
+            NetworkInfo networkInfo = cm.getActiveNetworkInfo();
+            ImageLoader.getInstance().adjustThreadCount(networkInfo);
+        }
 
         //Start download all images in background
         final Runnable task = new Runnable() {
