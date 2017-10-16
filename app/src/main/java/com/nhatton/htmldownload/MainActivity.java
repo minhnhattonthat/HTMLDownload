@@ -1,27 +1,21 @@
 package com.nhatton.htmldownload;
 
-import android.content.Context;
 import android.content.Intent;
-import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
-import java.util.ArrayList;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import static com.nhatton.htmldownload.util.HtmlHelper.autoCorrectUrl;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
     private EditText linkText;
     private RecyclerView listView;
-    private String response;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,37 +30,11 @@ public class MainActivity extends AppCompatActivity {
 
         listView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
 
-        final HttpHandler handler = new HttpHandler();
-
         getButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                resetAll();
-
-                if (!linkText.getText().toString().isEmpty()) {
-                    final Thread thread = new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Counter.INSTANCE.start();
-
-                            String link = linkText.getText().toString();
-                            link = autoCorrectUrl(link);
-
-                            response = handler.makeServiceCall(link);
-                            Log.d("Response", response);
-                            final ArrayList<String> images = filterResponse();
-
-                            MainActivity.this.runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    ImageAdapter adapter = new ImageAdapter(images, MainActivity.this);
-                                    listView.setAdapter(adapter);
-                                }
-                            });
-                        }
-                    });
-                    thread.start();
-                }
+                HTMLDownload htmlDownload = new HTMLDownload(MainActivity.this);
+                htmlDownload.load(linkText.getText().toString(), listView);
             }
         });
 
@@ -85,44 +53,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 linkText.getText().clear();
-                resetAll();
             }
         });
 
         linkText.setText("https://cryptid-creations.deviantart.com/gallery/");
     }
 
-    private ArrayList<String> filterResponse() {
-
-        ArrayList<String> result = new ArrayList<>();
-        String regex = "(<img.*src|content)=\"https?://.*\\.(jpg|png)";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(response);
-
-        int i = 0;
-        while (matcher.find(i)) {
-            String item = response.substring(matcher.start(), matcher.end());
-            item = item.replaceFirst("(<img.*src|content)=\"", "");
-            if (item.indexOf("http") != item.lastIndexOf("http")) {
-                item = item.substring(item.lastIndexOf("http"));
-            }
-            result.add(item);
-            i = matcher.end();
-        }
-
-        Log.e("Number of images", String.valueOf(result.size()));
-        return result;
-    }
-
-    private static String autoCorrectUrl(String url) {
-        if (!url.startsWith("http")) {
-            url = "http://" + url;
-        }
-        return url;
-    }
-
-    private void resetAll() {
-        listView.setAdapter(null);
-        ImageLoader.cancelAll();
-    }
 }

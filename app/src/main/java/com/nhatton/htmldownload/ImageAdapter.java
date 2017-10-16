@@ -19,8 +19,6 @@ import java.util.ArrayList;
 
 public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder> {
 
-    DownloadImageTask.DownloadListener listener;
-
     private ArrayList<String> items;
     private Context context;
 
@@ -46,20 +44,6 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
 
         this.items = items;
         this.context = context;
-        this.listener = new AdapterDownloadListener(this);
-    }
-
-    private static class AdapterDownloadListener implements DownloadImageTask.DownloadListener {
-        private ImageAdapter imageAdapter;
-
-        AdapterDownloadListener(ImageAdapter imageAdapter) {
-            this.imageAdapter = imageAdapter;
-        }
-
-        @Override
-        public void onDownloadFinished(int position) {
-            imageAdapter.noticeFinished();
-        }
     }
 
     private void noticeFinished() {
@@ -92,8 +76,6 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
             }
         };
         handler.post(task);
-
-//        new DownloadImageTask(holder.imageView, position, listener).execute(items.get(position));
     }
 
     @Override

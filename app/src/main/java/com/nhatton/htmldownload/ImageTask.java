@@ -23,7 +23,6 @@ public class ImageTask implements DownloadImageRunnable.TaskRunnableDownloadMeth
     // The Thread on which this task is currently running.
     Thread mCurrentThread;
 
-
     ImageTask() {
         mDownloadRunnable = new DownloadImageRunnable(this);
         mDecodeRunnable = new DecodeBitmapRunnable(this);
