@@ -23,25 +23,6 @@ public class ImageAdapter extends RecyclerView.Adapter<ImageAdapter.ImageHolder>
     private Context context;
 
     ImageAdapter(ArrayList<String> items, Context context) {
-        ImageLoader.getInstance().setUrlList(items);
-
-        ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (cm != null) {
-            NetworkInfo networkInfo = cm.getActiveNetworkInfo();
-            ImageLoader.getInstance().adjustThreadCount(networkInfo);
-        }
-
-        //Start download all images in background
-        final Runnable task = new Runnable() {
-            @Override
-            public void run() {
-                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
-                ImageLoader.startDownloadAll();
-            }
-        };
-        Thread thread = new Thread(task);
-        thread.start();
-
         this.items = items;
         this.context = context;
     }
