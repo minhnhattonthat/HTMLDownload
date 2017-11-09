@@ -10,8 +10,13 @@ import java.util.regex.Pattern;
  * Created by nhatton on 10/16/17.
  */
 
+// Noninstantiable helper class
 public class HtmlHelper {
 
+    // Suppress default constructor for noninstantiability
+    private HtmlHelper(){
+        throw new AssertionError();
+    }
     public static String autoCorrectUrl(String url) {
         if (!url.startsWith("http")) {
             url = "http://" + url;
